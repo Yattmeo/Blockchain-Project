@@ -1,0 +1,92 @@
+=========================================
+Weather Index Insurance Platform
+Complete Network Deployment
+=========================================
+
+Step 1: Cleaning up any existing network...
+Untagged: dev-peer0.insurer1.insurance.com-access-control_2-b8f913c887b6f11200141cdcbf28d6876aca5b3cf14d5b53490c5b88acd89675-872025f755efcd00a5c0faf4acb5f9610772f5732588c728c91021b2ad48bed4:latest
+Deleted: sha256:d4aed8086371d935a546c42e8e81e69a883296e4bea93716a1fce7f9497388d8
+Deleted: sha256:9027e4c3816ebbaeb8906b0082677c55c99d8021e97049dbe48cd87be3eb9a57
+Deleted: sha256:e15f4177b034487710f9dd415f523f51fe7fc87f746bdf3ee697189750d02d19
+[0;32m✓[0m Cleanup complete
+
+Step 2: Starting Hyperledger Fabric network...
+time="2025-11-03T19:21:41+08:00" level=warning msg="/Users/yattmeo/Desktop/SMU/Code/Blockchain proj/Blockchain-Project/network/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network insurance-network  Creating
+ Network insurance-network  Created
+ Volume network_orderer.insurance.com  Creating
+ Volume network_orderer.insurance.com  Created
+ Volume network_peer0.coop.insurance.com  Creating
+ Volume network_peer0.coop.insurance.com  Created
+ Volume network_peer0.insurer2.insurance.com  Creating
+ Volume network_peer0.insurer2.insurance.com  Created
+ Volume network_peer0.platform.insurance.com  Creating
+ Volume network_peer0.platform.insurance.com  Created
+ Volume network_peer0.insurer1.insurance.com  Creating
+ Volume network_peer0.insurer1.insurance.com  Created
+ Container couchdb.insurer2  Creating
+ Container orderer.insurance.com  Creating
+ Container couchdb.platform  Creating
+ Container cli  Creating
+ Container couchdb.insurer1  Creating
+ Container couchdb.coop  Creating
+ Container couchdb.platform  Created
+ Container peer0.platform.insurance.com  Creating
+ Container orderer.insurance.com  Created
+ Container couchdb.coop  Created
+ Container peer0.coop.insurance.com  Creating
+ Container couchdb.insurer1  Created
+ Container peer0.insurer1.insurance.com  Creating
+ Container couchdb.insurer2  Created
+ Container peer0.insurer2.insurance.com  Creating
+ Container cli  Created
+ Container peer0.platform.insurance.com  Created
+ Container peer0.coop.insurance.com  Created
+ Container peer0.insurer1.insurance.com  Created
+ Container peer0.insurer2.insurance.com  Created
+ Container couchdb.insurer2  Starting
+ Container couchdb.coop  Starting
+ Container couchdb.platform  Starting
+ Container cli  Starting
+ Container couchdb.insurer1  Starting
+ Container orderer.insurance.com  Starting
+ Container couchdb.coop  Started
+ Container peer0.coop.insurance.com  Starting
+ Container couchdb.insurer2  Started
+ Container peer0.insurer2.insurance.com  Starting
+ Container couchdb.insurer1  Started
+ Container peer0.insurer1.insurance.com  Starting
+ Container couchdb.platform  Started
+ Container peer0.platform.insurance.com  Starting
+ Container cli  Started
+ Container orderer.insurance.com  Started
+ Container peer0.coop.insurance.com  Started
+ Container peer0.insurer1.insurance.com  Started
+ Container peer0.insurer2.insurance.com  Started
+ Container peer0.platform.insurance.com  Started
+[0;32m✓[0m Network containers started
+Waiting for containers to initialize...
+[0;32m✓[0m Network ready
+
+Step 3: Creating channel: insurance-main...
+[0;32m✓[0m Channel created on orderer
+
+Step 4: Joining peers to channel...
+[0;32m✓[0m Insurer1 peer joined
+[0;32m✓[0m Insurer2 peer joined
+[0;32m✓[0m Coop peer joined
+[0;32m✓[0m Platform peer joined
+
+Step 5: Deploying chaincodes...
+
+  Deploying: access-control v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   access-control v2 deployed
+  Deploying: farmer v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...

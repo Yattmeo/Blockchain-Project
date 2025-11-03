@@ -1,0 +1,78 @@
+=========================================
+Weather Index Insurance Platform
+Complete Network Deployment
+=========================================
+
+Step 1: Cleaning up any existing network...
+[0;32m✓[0m Cleanup complete
+
+Step 2: Starting Hyperledger Fabric network...
+time="2025-11-03T19:13:45+08:00" level=warning msg="/Users/yattmeo/Desktop/SMU/Code/Blockchain proj/Blockchain-Project/network/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network insurance-network  Creating
+ Network insurance-network  Created
+ Volume network_peer0.insurer2.insurance.com  Creating
+ Volume network_peer0.insurer2.insurance.com  Created
+ Volume network_peer0.insurer1.insurance.com  Creating
+ Volume network_peer0.insurer1.insurance.com  Created
+ Volume network_peer0.coop.insurance.com  Creating
+ Volume network_peer0.coop.insurance.com  Created
+ Volume network_peer0.platform.insurance.com  Creating
+ Volume network_peer0.platform.insurance.com  Created
+ Volume network_orderer.insurance.com  Creating
+ Volume network_orderer.insurance.com  Created
+ Container orderer.insurance.com  Creating
+ Container cli  Creating
+ Container couchdb.insurer1  Creating
+ Container couchdb.platform  Creating
+ Container couchdb.insurer2  Creating
+ Container couchdb.coop  Creating
+ Container couchdb.insurer2  Created
+ Container peer0.insurer2.insurance.com  Creating
+ Container orderer.insurance.com  Created
+ Container couchdb.insurer1  Created
+ Container peer0.insurer1.insurance.com  Creating
+ Container couchdb.platform  Created
+ Container peer0.platform.insurance.com  Creating
+ Container couchdb.coop  Created
+ Container peer0.coop.insurance.com  Creating
+ Container cli  Created
+ Container peer0.insurer2.insurance.com  Created
+ Container peer0.platform.insurance.com  Created
+ Container peer0.insurer1.insurance.com  Created
+ Container peer0.coop.insurance.com  Created
+ Container couchdb.insurer1  Starting
+ Container orderer.insurance.com  Starting
+ Container couchdb.insurer2  Starting
+ Container couchdb.platform  Starting
+ Container couchdb.coop  Starting
+ Container cli  Starting
+ Container couchdb.platform  Started
+ Container peer0.platform.insurance.com  Starting
+ Container couchdb.insurer1  Started
+ Container peer0.insurer1.insurance.com  Starting
+ Container couchdb.coop  Started
+ Container peer0.coop.insurance.com  Starting
+ Container couchdb.insurer2  Started
+ Container peer0.insurer2.insurance.com  Starting
+ Container orderer.insurance.com  Started
+ Container cli  Started
+ Container peer0.platform.insurance.com  Started
+ Container peer0.insurer1.insurance.com  Started
+ Container peer0.coop.insurance.com  Started
+ Container peer0.insurer2.insurance.com  Started
+[0;32m✓[0m Network containers started
+Waiting for containers to initialize...
+[0;32m✓[0m Network ready
+
+Step 3: Creating channel: insurance-main...
+[0;32m✓[0m Channel created on orderer
+
+Step 4: Joining peers to channel...
+[0;32m✓[0m Insurer1 peer joined
+[0;32m✓[0m Insurer2 peer joined
+[0;32m✓[0m Coop peer joined
+[0;32m✓[0m Platform peer joined
+
+Step 5: Deploying chaincodes...
+
+  Deploying: access-control v2

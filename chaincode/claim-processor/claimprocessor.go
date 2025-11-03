@@ -15,18 +15,18 @@ type ClaimProcessorChaincode struct {
 
 // Claim represents a processed insurance claim
 type Claim struct {
-	ClaimID         string    `json:"claimID"`         // Unique claim identifier
-	PolicyID        string    `json:"policyID"`        // Associated policy
-	FarmerID        string    `json:"farmerID"`        // Farmer receiving payout
-	IndexID         string    `json:"indexID"`         // Weather index that triggered
-	TriggerDate     time.Time `json:"triggerDate"`     // When conditions were met
-	PayoutAmount    float64   `json:"payoutAmount"`    // Calculated payout
-	PayoutPercent   float64   `json:"payoutPercent"`   // Percentage of coverage
-	Status          string    `json:"status"`          // Pending, Approved, Paid, Rejected
-	ApprovedBy      string    `json:"approvedBy"`      // Approver identity
-	ProcessedDate   time.Time `json:"processedDate"`   // When claim was processed
-	PaymentTxID     string    `json:"paymentTxID"`     // Payment transaction reference
-	Notes           string    `json:"notes"`           // Additional information
+	ClaimID       string    `json:"claimID"`       // Unique claim identifier
+	PolicyID      string    `json:"policyID"`      // Associated policy
+	FarmerID      string    `json:"farmerID"`      // Farmer receiving payout
+	IndexID       string    `json:"indexID"`       // Weather index that triggered
+	TriggerDate   time.Time `json:"triggerDate"`   // When conditions were met
+	PayoutAmount  float64   `json:"payoutAmount"`  // Calculated payout
+	PayoutPercent float64   `json:"payoutPercent"` // Percentage of coverage
+	Status        string    `json:"status"`        // Pending, Approved, Paid, Rejected
+	ApprovedBy    string    `json:"approvedBy"`    // Approver identity
+	ProcessedDate time.Time `json:"processedDate"` // When claim was processed
+	PaymentTxID   string    `json:"paymentTxID"`   // Payment transaction reference
+	Notes         string    `json:"notes"`         // Additional information
 }
 
 // ========================================
@@ -74,18 +74,25 @@ func (cp *ClaimProcessorChaincode) TriggerPayout(ctx contractapi.TransactionCont
 		return fmt.Errorf("failed to get caller identity: %v", err)
 	}
 
+	// Get deterministic timestamp
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	timestamp := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos))
+
 	// Create claim record
 	claim := Claim{
 		ClaimID:       claimID,
 		PolicyID:      policyID,
 		FarmerID:      farmerID,
 		IndexID:       indexID,
-		TriggerDate:   time.Now(),
+		TriggerDate:   timestamp,
 		PayoutAmount:  payoutAmount,
 		PayoutPercent: payoutPercent,
 		Status:        "Pending",
 		ApprovedBy:    "",
-		ProcessedDate: time.Now(),
+		ProcessedDate: timestamp,
 		PaymentTxID:   "",
 		Notes:         fmt.Sprintf("Auto-triggered by index %s", indexID),
 	}
@@ -182,9 +189,16 @@ func (cp *ClaimProcessorChaincode) ApproveClaim(ctx contractapi.TransactionConte
 		return fmt.Errorf("failed to get caller identity: %v", err)
 	}
 
+	// Get deterministic timestamp
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	timestamp := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos))
+
 	claim.Status = "Approved"
 	claim.ApprovedBy = callerID
-	claim.ProcessedDate = time.Now()
+	claim.ProcessedDate = timestamp
 
 	claimJSON, err := json.Marshal(claim)
 	if err != nil {
@@ -212,9 +226,16 @@ func (cp *ClaimProcessorChaincode) RecordPayment(ctx contractapi.TransactionCont
 		return fmt.Errorf("can only record payment for approved claims")
 	}
 
+	// Get deterministic timestamp
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
+	if err != nil {
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
+	}
+	timestamp := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos))
+
 	claim.Status = "Paid"
 	claim.PaymentTxID = paymentTxID
-	claim.ProcessedDate = time.Now()
+	claim.ProcessedDate = timestamp
 
 	claimJSON, err := json.Marshal(claim)
 	if err != nil {

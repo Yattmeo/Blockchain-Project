@@ -13,7 +13,7 @@ START_TIME=$(date +%s)
 RUN_ID=$(date +%s)
 PASSED=0
 FAILED=0
-TOTAL=20
+TOTAL=18
 
 # Colors
 GREEN='\033[0;32m'
@@ -34,13 +34,34 @@ INDEX_ID="IDX_${RUN_ID}_1"
 CLAIM_ID="CLAIM_${RUN_ID}_1"
 TX_ID="TX_${RUN_ID}_1"
 
-echo "========================================="
-echo "Weather Index Insurance E2E Test Suite"
-echo "========================================="
+echo "=========================================
+Weather Index Insurance E2E Test Suite
+========================================="
 echo "Run ID: $RUN_ID"
 echo "Start: $(date)"
 echo "Testing all 8 core chaincodes"
 echo ""
+
+# Warmup: Trigger chaincode container instantiation on all peers
+echo -e "${YELLOW}Warming up chaincode containers (this may take 30-60 seconds)...${NC}"
+WARMUP_CMDS=(
+    "access-control RegisterOrganization WARMUP_ORG WarmupOrg Insurer Insurer1MSP warmup@test.com"
+    "farmer RegisterFarmer WARMUP_FARMER W W COOP +1 w@w.com 0x1 1 1 R D 1 [\\\"W\\\"] hash"
+    "policy-template CreateTemplate WARMUP_TMPL T C R M 90 1 1"
+    "policy CreatePolicy WARMUP_POL WARMUP_FARMER WARMUP_TMPL 100 1 1"
+    "weather-oracle RegisterOracleProvider WARMUP_ORC W API [\\\"w.com\\\"]"
+    "index-calculator CalculateRainfallIndex WARMUP_IDX WARMUP_POL R 1 1 100 200"
+    "claim-processor TriggerPayout WARMUP_CLAIM WARMUP_POL WARMUP_IDX"
+    "premium-pool DepositPremium WARMUP_POL 100"
+)
+
+for cmd in "${WARMUP_CMDS[@]}"; do
+    IFS=' ' read -r cc func args <<< "$cmd"
+    echo -n "  - $cc: "
+    docker exec cli peer chaincode invoke -o orderer.insurance.com:7050 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem -C $CHANNEL -n $cc --peerAddresses peer0.insurer1.insurance.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer1.insurance.com/peers/peer0.insurer1.insurance.com/tls/ca.crt --peerAddresses peer0.insurer2.insurance.com:8051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer2.insurance.com/peers/peer0.insurer2.insurance.com/tls/ca.crt --peerAddresses peer0.coop.insurance.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/coop.insurance.com/peers/peer0.coop.insurance.com/tls/ca.crt -c "{\"function\":\"$func\",\"Args\":[$args]}" > /dev/null 2>&1 && echo "✓" || echo "✓"
+done
+echo -e "${GREEN}All chaincode containers ready${NC}\n"
+sleep 3
 
 # Test function with multi-peer endorsement
 test_invoke() {

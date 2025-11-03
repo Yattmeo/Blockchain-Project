@@ -1,0 +1,159 @@
+=========================================
+Weather Index Insurance Platform
+Complete Network Deployment
+=========================================
+
+Step 1: Cleaning up any existing network...
+[0;32m✓[0m Cleanup complete
+
+Step 2: Starting Hyperledger Fabric network...
+time="2025-11-03T21:59:29+08:00" level=warning msg="/Users/yattmeo/Desktop/SMU/Code/Blockchain proj/Blockchain-Project/network/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network insurance-network  Creating
+ Network insurance-network  Created
+ Volume network_peer0.coop.insurance.com  Creating
+ Volume network_peer0.coop.insurance.com  Created
+ Volume network_orderer.insurance.com  Creating
+ Volume network_orderer.insurance.com  Created
+ Volume network_peer0.insurer1.insurance.com  Creating
+ Volume network_peer0.insurer1.insurance.com  Created
+ Volume network_peer0.insurer2.insurance.com  Creating
+ Volume network_peer0.insurer2.insurance.com  Created
+ Volume network_peer0.platform.insurance.com  Creating
+ Volume network_peer0.platform.insurance.com  Created
+ Container orderer.insurance.com  Creating
+ Container couchdb.insurer1  Creating
+ Container couchdb.insurer2  Creating
+ Container cli  Creating
+ Container couchdb.coop  Creating
+ Container couchdb.platform  Creating
+ Container couchdb.insurer2  Created
+ Container peer0.insurer2.insurance.com  Creating
+ Container couchdb.platform  Created
+ Container peer0.platform.insurance.com  Creating
+ Container orderer.insurance.com  Created
+ Container couchdb.insurer1  Created
+ Container peer0.insurer1.insurance.com  Creating
+ Container couchdb.coop  Created
+ Container peer0.coop.insurance.com  Creating
+ Container cli  Created
+ Container peer0.insurer2.insurance.com  Created
+ Container peer0.insurer1.insurance.com  Created
+ Container peer0.platform.insurance.com  Created
+ Container peer0.coop.insurance.com  Created
+ Container couchdb.insurer1  Starting
+ Container orderer.insurance.com  Starting
+ Container couchdb.coop  Starting
+ Container couchdb.insurer2  Starting
+ Container cli  Starting
+ Container couchdb.platform  Starting
+ Container couchdb.coop  Started
+ Container peer0.coop.insurance.com  Starting
+ Container couchdb.insurer1  Started
+ Container peer0.insurer1.insurance.com  Starting
+ Container couchdb.platform  Started
+ Container peer0.platform.insurance.com  Starting
+ Container couchdb.insurer2  Started
+ Container peer0.insurer2.insurance.com  Starting
+ Container cli  Started
+ Container orderer.insurance.com  Started
+ Container peer0.coop.insurance.com  Started
+ Container peer0.insurer1.insurance.com  Started
+ Container peer0.platform.insurance.com  Started
+ Container peer0.insurer2.insurance.com  Started
+[0;32m✓[0m Network containers started
+Waiting for containers to initialize...
+[0;32m✓[0m Network ready
+
+Step 3: Creating channel: insurance-main...
+[0;32m✓[0m Channel created on orderer
+
+Step 4: Joining peers to channel...
+[0;32m✓[0m Insurer1 peer joined
+[0;32m✓[0m Insurer2 peer joined
+[0;32m✓[0m Coop peer joined
+[0;32m✓[0m Platform peer joined
+
+Step 5: Deploying chaincodes...
+
+  Deploying: access-control v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   access-control v2 deployed
+  Deploying: farmer v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   farmer v2 deployed
+  Deploying: policy-template v1
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   policy-template v1 deployed
+  Deploying: policy v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   policy v2 deployed
+  Deploying: weather-oracle v1
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   weather-oracle v1 deployed
+  Deploying: index-calculator v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   index-calculator v2 deployed
+  Deploying: claim-processor v1
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   claim-processor v1 deployed
+  Deploying: premium-pool v2
+    - Packaging (downloading Go modules, this may take 1-2 minutes)...
+      Packaging in progress...
+    - Installing on all peers...
+    - Approving for all organizations...
+    - Committing to channel...
+[0;32m✓[0m   premium-pool v2 deployed
+
+=========================================
+[0;32m✓✓✓ DEPLOYMENT COMPLETE ✓✓✓[0m
+=========================================
+
+Network Status:
+  - Network: Running
+  - Channel: insurance-main
+  - Peers: 4 (All joined)
+  - Chaincodes: 8 (All deployed)
+
+Deployed Chaincodes:
+  1. access-control v2
+  2. farmer v2 (with private data)
+  3. policy-template v1
+  4. policy v2
+  5. weather-oracle v1
+  6. index-calculator v2
+  7. claim-processor v1
+  8. premium-pool v2
+
+Next steps:
+  - Run E2E tests: cd test-scripts && ./test-e2e-complete.sh
+  - View logs: docker logs <container-name>
+  - Bring down: cd network && docker compose down --volumes
+

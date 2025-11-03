@@ -99,15 +99,17 @@ function createChannel() {
     echo "Creating channel: ${CHANNEL_NAME}"
     echo "========================================="
     
-    # Create channel using osnadmin CLI
-    docker exec cli peer channel create \
-        -o orderer.insurance.com:7050 \
-        -c ${CHANNEL_NAME} \
-        -f ./channel-artifacts/${CHANNEL_NAME}.tx \
-        --outputBlock ./channel-artifacts/${CHANNEL_NAME}.block \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    # Join channel to orderer using osnadmin
+    echo "Joining channel to orderer..."
+    docker exec cli osnadmin channel join \
+        --channelID ${CHANNEL_NAME} \
+        --config-block ./channel-artifacts/${CHANNEL_NAME}.block \
+        -o orderer.insurance.com:7053 \
+        --ca-file /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem \
+        --client-cert /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/tls/server.crt \
+        --client-key /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/tls/server.key
     
-    echo "Channel created successfully!"
+    echo "Channel joined to orderer successfully!"
     
     # Join peers to channel
     joinChannel

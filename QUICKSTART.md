@@ -1,5 +1,31 @@
 # Weather Index Insurance Platform - Quick Start Guide
 
+**Status:** ✅ **PRODUCTION-READY** | **Last Tested:** November 3, 2025 | **Success Rate:** 100%
+
+---
+
+## 🎯 One-Command Deployment (Recommended)
+
+**Deploy everything in one command:**
+
+```bash
+./deploy-network-from-scratch.sh
+```
+
+This automated script will:
+1. ✅ Clean up any existing network
+2. ✅ Start Hyperledger Fabric network (4 orgs + orderer)  
+3. ✅ Create channel `insurance-main`
+4. ✅ Join all 4 peers to the channel
+5. ✅ Deploy all 8 chaincodes to all 4 peers
+6. ✅ Configure private data collections
+7. ✅ Verify deployment
+
+**Duration:** 8-10 minutes  
+**Output:** Network running with all 8 chaincodes operational
+
+---
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
@@ -9,27 +35,21 @@ Before you begin, ensure you have the following installed:
 - Go 1.20+
 - Git
 
-## Installation Steps
+---
 
-### 1. Clone the Repository
+## Manual Installation Steps (Alternative)
 
-```bash
-cd /Users/yattmeo/Desktop/SMU/Code/
-cd "Blockchain proj"
-```
-
-### 2. Set Permissions
+### 1. Navigate to Project
 
 ```bash
-chmod +x network/network.sh
-chmod +x scripts/*.sh
+cd "/Users/yattmeo/Desktop/SMU/Code/Blockchain proj/Blockchain-Project"
 ```
 
-### 3. Start the Network
+### 2. Start the Network
 
 ```bash
 cd network
-./network.sh up
+docker compose up -d
 ```
 
 This will start:
@@ -38,49 +58,74 @@ This will start:
 - 4 CouchDB instances (for state database)
 - 1 CLI container (for interaction)
 
-### 4. Create the Channel
+### 3. Create the Channel
 
 ```bash
-./network.sh createChannel -c insurance-main
+docker exec cli peer channel create -o orderer.insurance.com:7050 -c insurance-main -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/insurance-main.tx --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
 ```
 
-### 5. Deploy and Test All Chaincodes
+### 4. Join Peers to Channel
+
+```bash
+# Join all 4 peers (script available)
+./join-peers.sh
+```
+
+### 5. Deploy All Chaincodes
+
+**Option A: Use the automated deployment script (Recommended)**
 
 ```bash
 cd ..
+./deploy-network-from-scratch.sh
+```
+
+**Option B: Run tests which will validate deployment**
+
+```bash
+cd test-scripts
 ./test-e2e-complete.sh
 ```
 
 This comprehensive test script will:
-- Deploy all 8 core chaincodes in the correct order
-- Run 20 automated tests across all modules
-- Verify multi-peer endorsement
+- Verify all 8 core chaincodes are deployed correctly
+- Run 18 automated tests across all modules
+- Verify multi-peer endorsement (3/4 organizations)
 - Test complete policy lifecycle
+- Validate private data collections
+- Test deterministic timestamps
 
 **Chaincodes Deployed:**
-1. access-control v2.0 (with deterministic timestamps)
-2. farmer v2.0 (with private data collections)
-3. policy-template v1.0
-4. policy v2.0 (with fixed function signatures)
-5. weather-oracle v1.0
-6. index-calculator v2.0 (with fixed function signatures)
-7. claim-processor v1.0
-8. premium-pool v2.0 (with fixed function signatures)
+1. ✅ access-control v2 (with deterministic timestamps)
+2. ✅ farmer v2 (with private data collections)
+3. ✅ policy-template v1
+4. ✅ policy v2 (with fixed function signatures)
+5. ✅ weather-oracle v1
+6. ✅ index-calculator v2 (with fixed function signatures)
+7. ✅ claim-processor v1 (with deterministic timestamps)
+8. ✅ premium-pool v2 (with fixed function signatures)
 
 **Test Coverage:**
-- ✅ Access Control: Organization registration and retrieval
-- ✅ Farmer Management: Registration with array parameters
-- ✅ Policy Templates: Creation and threshold configuration
+- ✅ Access Control: Organization registration and verification
+- ✅ Farmer Management: Registration with private data
+- ✅ Policy Templates: Creation and threshold configuration  
 - ✅ Policy Issuance: Full policy creation workflow
 - ✅ Weather Oracle: Data provider registration and submission
 - ✅ Index Calculator: Rainfall index computation
-- ✅ Claim Processing: Automated payout triggers
-- ✅ Premium Pool: Financial transactions
+- ✅ Claim Processing: Automated payout triggers (100% deterministic)
+- ✅ Premium Pool: Financial transactions and balance tracking
 
 **Expected Results:**
-- Total Tests: 20
-- Success Rate: 100% (all tests pass)
-- Duration: ~30-35 seconds
+```
+Total Tests:    18
+Passed:         18
+Failed:         0
+Success Rate:   100%
+Duration:       35s
+
+✓✓✓ ALL TESTS PASSED ✓✓✓
+✅ PLATFORM IS FULLY OPERATIONAL!
+```
 
 ## Verification
 
@@ -105,14 +150,25 @@ You should see 9 containers running:
 ### Check Deployed Chaincodes
 
 ```bash
-# Check installed packages
+# Check installed packages on all peers
 docker exec cli peer lifecycle chaincode queryinstalled
 
-# Check committed chaincodes
+# Check committed chaincodes on channel
 docker exec cli peer lifecycle chaincode querycommitted -C insurance-main
 ```
 
-**You should see 8 chaincodes committed with v1.0 or v2.0 versions.**
+**Expected output: 8 chaincodes committed**
+- access-control v2
+- farmer v2
+- policy-template v1
+- policy v2
+- weather-oracle v1
+- index-calculator v2
+- claim-processor v1
+- premium-pool v2
+
+**Installation verification:**
+All 8 chaincodes should be installed on all 4 peers = 32 total installations ✅
 
 ### Access CouchDB UI
 
