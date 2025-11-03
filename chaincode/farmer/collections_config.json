@@ -1,0 +1,14 @@
+[
+    {
+        "name": "farmerPersonalInfo",
+        "policy": "OR('Insurer1MSP.member', 'Insurer2MSP.member', 'CoopMSP.member', 'PlatformMSP.member')",
+        "requiredPeerCount": 0,
+        "maxPeerCount": 3,
+        "blockToLive": 0,
+        "memberOnlyRead": false,
+        "memberOnlyWrite": false,
+        "endorsementPolicy": {
+            "signaturePolicy": "OR('Insurer1MSP.member', 'Insurer2MSP.member', 'CoopMSP.member')"
+        }
+    }
+]

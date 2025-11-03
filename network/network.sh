@@ -1,0 +1,325 @@
+#!/bin/bash
+
+# Network startup script for Weather Index Insurance Platform
+# Usage: ./network.sh up|down|restart
+
+set -e
+
+# Set environment variables
+export PATH=${PWD}/bin:$PATH
+export FABRIC_CFG_PATH=${PWD}/config
+
+CHANNEL_NAME="insurance-main"
+CHAINCODE_LANGUAGE="golang"
+DELAY=3
+MAX_RETRY=5
+VERBOSE="false"
+
+# Print the usage message
+function printHelp() {
+    echo "Usage: "
+    echo "  network.sh <Mode> [Flags]"
+    echo "    <Mode>"
+    echo "      up - Bring up the network"
+    echo "      down - Clear the network"
+    echo "      restart - Restart the network"
+    echo "      createChannel - Create and join channel"
+    echo "      deployCC - Deploy chaincode"
+    echo "    Flags:"
+    echo "      -c <channel name> - Channel name to use (defaults to \"insurance-main\")"
+    echo "      -ccn <chaincode name> - Chaincode name"
+    echo "      -ccp <chaincode path> - Chaincode path"
+    echo "      -ccl <chaincode language> - Chaincode language (default: golang)"
+    echo ""
+    echo "Example:"
+    echo "  ./network.sh up"
+    echo "  ./network.sh createChannel -c insurance-main"
+    echo "  ./network.sh deployCC -ccn access-control -ccp chaincode/access-control"
+}
+
+# Function to bring up the network
+function networkUp() {
+    echo "========================================="
+    echo "Starting Weather Index Insurance Network"
+    echo "========================================="
+    
+    # Check if docker compose is installed
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Docker Compose is not installed. Please install it first."
+        exit 1
+    fi
+    
+    # Start the network
+    docker-compose -f docker-compose.yaml up -d 2>&1
+    
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to start network"
+        exit 1
+    fi
+    
+    # Wait for containers to start
+    echo "Waiting for containers to start..."
+    sleep 5
+    
+    echo ""
+    echo "========================================="
+    echo "Network started successfully!"
+    echo "========================================="
+    echo ""
+    echo "Available peers:"
+    echo "  - peer0.insurer1.insurance.com:7051"
+    echo "  - peer0.insurer2.insurance.com:8051"
+    echo "  - peer0.coop.insurance.com:9051"
+    echo "  - peer0.platform.insurance.com:10051"
+    echo ""
+    echo "Orderer:"
+    echo "  - orderer.insurance.com:7050"
+    echo ""
+}
+
+# Function to bring down the network
+function networkDown() {
+    echo "========================================="
+    echo "Stopping Weather Index Insurance Network"
+    echo "========================================="
+    
+    # Stop all containers
+    docker-compose -f docker-compose.yaml down --volumes --remove-orphans
+    
+    # Remove chaincode images
+    docker rmi $(docker images | grep "dev-peer" | awk '{print $3}') 2>/dev/null || true
+    
+    echo ""
+    echo "Network stopped successfully!"
+}
+
+# Function to create channel
+function createChannel() {
+    echo "========================================="
+    echo "Creating channel: ${CHANNEL_NAME}"
+    echo "========================================="
+    
+    # Create channel using osnadmin CLI
+    docker exec cli peer channel create \
+        -o orderer.insurance.com:7050 \
+        -c ${CHANNEL_NAME} \
+        -f ./channel-artifacts/${CHANNEL_NAME}.tx \
+        --outputBlock ./channel-artifacts/${CHANNEL_NAME}.block \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    
+    echo "Channel created successfully!"
+    
+    # Join peers to channel
+    joinChannel
+}
+
+# Function to join peers to channel
+function joinChannel() {
+    echo ""
+    echo "========================================="
+    echo "Joining peers to channel: ${CHANNEL_NAME}"
+    echo "========================================="
+    
+    # Join Insurer1 peer
+    setGlobals 1 "Insurer1"
+    docker exec cli peer channel join \
+        -b ./channel-artifacts/${CHANNEL_NAME}.block
+    
+    # Join Insurer2 peer
+    setGlobals 2 "Insurer2"
+    docker exec cli peer channel join \
+        -b ./channel-artifacts/${CHANNEL_NAME}.block
+    
+    # Join Coop peer
+    setGlobals 3 "Coop"
+    docker exec cli peer channel join \
+        -b ./channel-artifacts/${CHANNEL_NAME}.block
+    
+    # Join Platform peer
+    setGlobals 4 "Platform"
+    docker exec cli peer channel join \
+        -b ./channel-artifacts/${CHANNEL_NAME}.block
+    
+    echo "All peers joined channel successfully!"
+}
+
+# Function to set global environment variables for peer
+function setGlobals() {
+    local PEER=$1
+    local ORG=$2
+    
+    if [ $PEER -eq 1 ]; then
+        export CORE_PEER_LOCALMSPID="Insurer1MSP"
+        export CORE_PEER_ADDRESS=peer0.insurer1.insurance.com:7051
+        export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer1.insurance.com/peers/peer0.insurer1.insurance.com/tls/ca.crt
+        export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer1.insurance.com/users/Admin@insurer1.insurance.com/msp
+    elif [ $PEER -eq 2 ]; then
+        export CORE_PEER_LOCALMSPID="Insurer2MSP"
+        export CORE_PEER_ADDRESS=peer0.insurer2.insurance.com:8051
+        export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer2.insurance.com/peers/peer0.insurer2.insurance.com/tls/ca.crt
+        export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer2.insurance.com/users/Admin@insurer2.insurance.com/msp
+    elif [ $PEER -eq 3 ]; then
+        export CORE_PEER_LOCALMSPID="CoopMSP"
+        export CORE_PEER_ADDRESS=peer0.coop.insurance.com:9051
+        export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/coop.insurance.com/peers/peer0.coop.insurance.com/tls/ca.crt
+        export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/coop.insurance.com/users/Admin@coop.insurance.com/msp
+    elif [ $PEER -eq 4 ]; then
+        export CORE_PEER_LOCALMSPID="PlatformMSP"
+        export CORE_PEER_ADDRESS=peer0.platform.insurance.com:10051
+        export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/platform.insurance.com/peers/peer0.platform.insurance.com/tls/ca.crt
+        export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/platform.insurance.com/users/Admin@platform.insurance.com/msp
+    fi
+}
+
+# Function to deploy chaincode
+function deployChaincode() {
+    local CC_NAME=$1
+    local CC_PATH=$2
+    local VERSION="1.0"
+    local SEQUENCE=1
+    
+    echo "========================================="
+    echo "Deploying chaincode: ${CC_NAME}"
+    echo "Path: ${CC_PATH}"
+    echo "========================================="
+    
+    # Package chaincode
+    echo "Step 1: Packaging chaincode..."
+    docker exec cli peer lifecycle chaincode package ${CC_NAME}.tar.gz \
+        --path ${CC_PATH} \
+        --lang ${CHAINCODE_LANGUAGE} \
+        --label ${CC_NAME}_${VERSION}
+    
+    # Install on all peers
+    echo "Step 2: Installing chaincode on all peers..."
+    
+    setGlobals 1 "Insurer1"
+    docker exec cli peer lifecycle chaincode install ${CC_NAME}.tar.gz
+    
+    setGlobals 2 "Insurer2"
+    docker exec cli peer lifecycle chaincode install ${CC_NAME}.tar.gz
+    
+    setGlobals 3 "Coop"
+    docker exec cli peer lifecycle chaincode install ${CC_NAME}.tar.gz
+    
+    setGlobals 4 "Platform"
+    docker exec cli peer lifecycle chaincode install ${CC_NAME}.tar.gz
+    
+    # Query installed chaincode to get package ID
+    echo "Step 3: Querying installed chaincode..."
+    setGlobals 1 "Insurer1"
+    PACKAGE_ID=$(docker exec cli peer lifecycle chaincode queryinstalled | grep ${CC_NAME}_${VERSION} | awk '{print $3}' | sed 's/,$//')
+    
+    echo "Package ID: ${PACKAGE_ID}"
+    
+    # Approve for all organizations
+    echo "Step 4: Approving chaincode for organizations..."
+    
+    setGlobals 1 "Insurer1"
+    docker exec cli peer lifecycle chaincode approveformyorg \
+        -o orderer.insurance.com:7050 \
+        --channelID ${CHANNEL_NAME} \
+        --name ${CC_NAME} \
+        --version ${VERSION} \
+        --package-id ${PACKAGE_ID} \
+        --sequence ${SEQUENCE} \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    
+    setGlobals 2 "Insurer2"
+    docker exec cli peer lifecycle chaincode approveformyorg \
+        -o orderer.insurance.com:7050 \
+        --channelID ${CHANNEL_NAME} \
+        --name ${CC_NAME} \
+        --version ${VERSION} \
+        --package-id ${PACKAGE_ID} \
+        --sequence ${SEQUENCE} \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    
+    # Check commit readiness
+    echo "Step 5: Checking commit readiness..."
+    docker exec cli peer lifecycle chaincode checkcommitreadiness \
+        --channelID ${CHANNEL_NAME} \
+        --name ${CC_NAME} \
+        --version ${VERSION} \
+        --sequence ${SEQUENCE} \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    
+    # Commit chaincode
+    echo "Step 6: Committing chaincode..."
+    setGlobals 1 "Insurer1"
+    docker exec cli peer lifecycle chaincode commit \
+        -o orderer.insurance.com:7050 \
+        --channelID ${CHANNEL_NAME} \
+        --name ${CC_NAME} \
+        --version ${VERSION} \
+        --sequence ${SEQUENCE} \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem \
+        --peerAddresses peer0.insurer1.insurance.com:7051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer1.insurance.com/peers/peer0.insurer1.insurance.com/tls/ca.crt \
+        --peerAddresses peer0.insurer2.insurance.com:8051 \
+        --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/insurer2.insurance.com/peers/peer0.insurer2.insurance.com/tls/ca.crt
+    
+    # Query committed chaincode
+    echo "Step 7: Querying committed chaincode..."
+    docker exec cli peer lifecycle chaincode querycommitted \
+        --channelID ${CHANNEL_NAME} \
+        --name ${CC_NAME} \
+        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/msp/tlscacerts/tlsca.insurance.com-cert.pem
+    
+    echo ""
+    echo "Chaincode ${CC_NAME} deployed successfully!"
+}
+
+# Parse commandline args
+MODE=$1
+shift
+
+while [[ $# -ge 1 ]] ; do
+    key="$1"
+    case $key in
+        -c )
+            CHANNEL_NAME="$2"
+            shift
+            ;;
+        -ccn )
+            CC_NAME="$2"
+            shift
+            ;;
+        -ccp )
+            CC_PATH="$2"
+            shift
+            ;;
+        -ccl )
+            CHAINCODE_LANGUAGE="$2"
+            shift
+            ;;
+        * )
+            echo "Unknown flag: $key"
+            printHelp
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Execute based on mode
+if [ "${MODE}" == "up" ]; then
+    networkUp
+elif [ "${MODE}" == "down" ]; then
+    networkDown
+elif [ "${MODE}" == "restart" ]; then
+    networkDown
+    networkUp
+elif [ "${MODE}" == "createChannel" ]; then
+    createChannel
+elif [ "${MODE}" == "deployCC" ]; then
+    if [ -z "${CC_NAME}" ] || [ -z "${CC_PATH}" ]; then
+        echo "Error: Chaincode name and path are required"
+        printHelp
+        exit 1
+    fi
+    deployChaincode ${CC_NAME} ${CC_PATH}
+else
+    printHelp
+    exit 1
+fi

@@ -1,0 +1,52 @@
+# Crypto configuration for Weather Index Insurance Platform
+# This file defines the organizational structure and generates certificates
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: insurance.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+
+PeerOrgs:
+  - Name: Insurer1
+    Domain: insurer1.insurance.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1
+
+  - Name: Insurer2
+    Domain: insurer2.insurance.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1
+
+  - Name: Coop
+    Domain: coop.insurance.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1
+
+  - Name: Platform
+    Domain: platform.insurance.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1

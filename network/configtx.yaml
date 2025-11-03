@@ -1,0 +1,196 @@
+Organizations:
+  - &OrdererOrg
+      Name: OrdererOrg
+      ID: OrdererMSP
+      MSPDir: organizations/ordererOrganizations/insurance.com/msp
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('OrdererMSP.member')"
+          Writers:
+              Type: Signature
+              Rule: "OR('OrdererMSP.member')"
+          Admins:
+              Type: Signature
+              Rule: "OR('OrdererMSP.admin')"
+      OrdererEndpoints:
+          - orderer.insurance.com:7050
+
+  - &Insurer1
+      Name: Insurer1MSP
+      ID: Insurer1MSP
+      MSPDir: organizations/peerOrganizations/insurer1.insurance.com/msp
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('Insurer1MSP.admin', 'Insurer1MSP.peer', 'Insurer1MSP.client')"
+          Writers:
+              Type: Signature
+              Rule: "OR('Insurer1MSP.admin', 'Insurer1MSP.client')"
+          Admins:
+              Type: Signature
+              Rule: "OR('Insurer1MSP.admin')"
+          Endorsement:
+              Type: Signature
+              Rule: "OR('Insurer1MSP.peer')"
+
+  - &Insurer2
+      Name: Insurer2MSP
+      ID: Insurer2MSP
+      MSPDir: organizations/peerOrganizations/insurer2.insurance.com/msp
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('Insurer2MSP.admin', 'Insurer2MSP.peer', 'Insurer2MSP.client')"
+          Writers:
+              Type: Signature
+              Rule: "OR('Insurer2MSP.admin', 'Insurer2MSP.client')"
+          Admins:
+              Type: Signature
+              Rule: "OR('Insurer2MSP.admin')"
+          Endorsement:
+              Type: Signature
+              Rule: "OR('Insurer2MSP.peer')"
+
+  - &Coop
+      Name: CoopMSP
+      ID: CoopMSP
+      MSPDir: organizations/peerOrganizations/coop.insurance.com/msp
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('CoopMSP.admin', 'CoopMSP.peer', 'CoopMSP.client')"
+          Writers:
+              Type: Signature
+              Rule: "OR('CoopMSP.admin', 'CoopMSP.client')"
+          Admins:
+              Type: Signature
+              Rule: "OR('CoopMSP.admin')"
+          Endorsement:
+              Type: Signature
+              Rule: "OR('CoopMSP.peer')"
+
+  - &Platform
+      Name: PlatformMSP
+      ID: PlatformMSP
+      MSPDir: organizations/peerOrganizations/platform.insurance.com/msp
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('PlatformMSP.admin', 'PlatformMSP.peer', 'PlatformMSP.client')"
+          Writers:
+              Type: Signature
+              Rule: "OR('PlatformMSP.admin', 'PlatformMSP.client')"
+          Admins:
+              Type: Signature
+              Rule: "OR('PlatformMSP.admin')"
+          Endorsement:
+              Type: Signature
+              Rule: "OR('PlatformMSP.peer')"
+
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+    Orderer: &OrdererCapabilities
+        V2_0: true
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+Application: &ApplicationDefaults
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - orderer.insurance.com:7050
+    EtcdRaft:
+        Consenters:
+        - Host: orderer.insurance.com
+          Port: 7050
+          ClientTLSCert: organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/tls/server.crt
+          ServerTLSCert: organizations/ordererOrganizations/insurance.com/orderers/orderer.insurance.com/tls/server.crt
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
+
+Profiles:
+    InsuranceOrdererGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Consortiums:
+            InsuranceConsortium:
+                Organizations:
+                    - *Insurer1
+                    - *Insurer2
+                    - *Coop
+                    - *Platform
+
+    InsuranceChannel:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Insurer1
+                - *Insurer2
+                - *Coop
+                - *Platform
+            Capabilities:
+                <<: *ApplicationCapabilities
