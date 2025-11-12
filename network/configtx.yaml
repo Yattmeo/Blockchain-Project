@@ -33,6 +33,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('Insurer1MSP.peer')"
+      AnchorPeers:
+          - Host: peer0.insurer1.insurance.com
+            Port: 7051
 
   - &Insurer2
       Name: Insurer2MSP
@@ -51,6 +54,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('Insurer2MSP.peer')"
+      AnchorPeers:
+          - Host: peer0.insurer2.insurance.com
+            Port: 8051
 
   - &Coop
       Name: CoopMSP
@@ -69,6 +75,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('CoopMSP.peer')"
+      AnchorPeers:
+          - Host: peer0.coop.insurance.com
+            Port: 9051
 
   - &Platform
       Name: PlatformMSP
@@ -87,6 +96,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('PlatformMSP.peer')"
+      AnchorPeers:
+          - Host: peer0.platform.insurance.com
+            Port: 10051
 
 Capabilities:
     Channel: &ChannelCapabilities
@@ -179,12 +191,26 @@ Profiles:
                     - *Platform
 
     InsuranceChannel:
+        Consortium: InsuranceConsortium
+        <<: *ChannelDefaults
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Insurer1
+                - *Insurer2
+                - *Coop
+                - *Platform
+            Capabilities:
+                <<: *ApplicationCapabilities
+
+    InsuranceChannelGenesis:
         <<: *ChannelDefaults
         Orderer:
             <<: *OrdererDefaults
             Organizations:
                 - *OrdererOrg
-            Capabilities: *OrdererCapabilities
+            Capabilities:
+                <<: *OrdererCapabilities
         Application:
             <<: *ApplicationDefaults
             Organizations:

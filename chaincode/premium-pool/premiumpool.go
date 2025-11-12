@@ -214,6 +214,16 @@ func (pp *PremiumPoolChaincode) GetPoolBalance(ctx contractapi.TransactionContex
 	return pool.TotalBalance, nil
 }
 
+// GetPoolDetails returns complete pool information
+func (pp *PremiumPoolChaincode) GetPoolDetails(ctx contractapi.TransactionContextInterface) (*PremiumPool, error) {
+	pool, err := pp.getPool(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return pool, nil
+}
+
 // CalculateReserves ensures sufficient funds for potential claims
 func (pp *PremiumPoolChaincode) CalculateReserves(ctx contractapi.TransactionContextInterface,
 	totalCoverage float64, riskFactor float64) error {
@@ -353,6 +363,34 @@ func (pp *PremiumPoolChaincode) GetTransactionHistory(ctx contractapi.Transactio
 	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query transactions: %v", err)
+	}
+	defer resultsIterator.Close()
+
+	var transactions []*Transaction
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var tx Transaction
+		err = json.Unmarshal(queryResponse.Value, &tx)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, &tx)
+	}
+
+	return transactions, nil
+}
+
+// GetAllTransactionHistory queries all payment records (for admin/audit view)
+func (pp *PremiumPoolChaincode) GetAllTransactionHistory(ctx contractapi.TransactionContextInterface) ([]*Transaction, error) {
+	// Use GetStateByPartialCompositeKey with "TX_" prefix to get only transaction records
+	// Since we're using simple keys like "TX_xxx", we can use GetStateByRange
+	resultsIterator, err := ctx.GetStub().GetStateByRange("TX_", "TX_~")
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all transactions: %v", err)
 	}
 	defer resultsIterator.Close()
 

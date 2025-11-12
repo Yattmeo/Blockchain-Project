@@ -1,0 +1,75 @@
+# Logs and temporary files
+*.log
+*.log.*
+deploy-output.log
+deploy-full.log
+deploy-phase2.log
+deployment-fresh.log
+deployment-output.txt
+test-output.log
+
+# Script logs
+scripts/deployment/*.log
+scripts/tests/*.log
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+build/
+*.js.map
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Hyperledger Fabric artifacts
+network/channel-artifacts/*.block
+network/channel-artifacts/*.tx
+network/organizations/peerOrganizations/
+network/organizations/ordererOrganizations/
+network/system-genesis-block/
+
+# Chaincode vendor folders
+chaincode/*/vendor/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Temporary test files
+test-scripts/*.log
+test-scripts/temp/
+
+# API Gateway logs
+api-gateway/logs/*.log
+api-gateway/*.log
+
+# UI build
+insurance-ui/dist/
+insurance-ui/.vite/
+
+# Coverage reports
+coverage/
+*.coverage
+
+# Docker volumes
+.docker/
+

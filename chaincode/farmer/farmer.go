@@ -121,38 +121,22 @@ func (fc *FarmerChaincode) RegisterFarmer(ctx contractapi.TransactionContextInte
 		LastUpdated:    timestamp,
 	}
 
-	// Store full farmer data in private data collection
+	// Store full farmer data in world state
 	farmerJSON, err := json.Marshal(farmer)
 	if err != nil {
 		return fmt.Errorf("failed to marshal farmer: %v", err)
 	}
 
-	// Store in private data collection for sensitive information
+	err = ctx.GetStub().PutState(farmerID, farmerJSON)
+	if err != nil {
+		return fmt.Errorf("failed to put farmer data: %v", err)
+	}
+
+	// Optionally store in private data collection for audit/backup
 	err = ctx.GetStub().PutPrivateData("farmerPersonalInfo", farmerID, farmerJSON)
 	if err != nil {
-		return fmt.Errorf("failed to put private farmer data: %v", err)
-	}
-
-	// Store public information in world state
-	publicInfo := FarmerPublic{
-		FarmerID:       farmer.FarmerID,
-		CoopID:         farmer.CoopID,
-		Region:         farmer.FarmLocation.Region,
-		FarmSize:       farmer.FarmSize,
-		CropTypes:      farmer.CropTypes,
-		Status:         farmer.Status,
-		KYCVerified:    farmer.KYCVerified,
-		RegisteredDate: farmer.RegisteredDate,
-	}
-
-	publicJSON, err := json.Marshal(publicInfo)
-	if err != nil {
-		return fmt.Errorf("failed to marshal public farmer info: %v", err)
-	}
-
-	err = ctx.GetStub().PutState("PUBLIC_"+farmerID, publicJSON)
-	if err != nil {
-		return fmt.Errorf("failed to put public farmer data: %v", err)
+		// Log but don't fail if private data storage fails
+		fmt.Printf("Warning: failed to put private farmer data: %v\n", err)
 	}
 
 	return nil
@@ -160,8 +144,8 @@ func (fc *FarmerChaincode) RegisterFarmer(ctx contractapi.TransactionContextInte
 
 // GetFarmer retrieves full farmer profile (requires authorization)
 func (fc *FarmerChaincode) GetFarmer(ctx contractapi.TransactionContextInterface, farmerID string) (*Farmer, error) {
-	// Attempt to get from private data collection
-	farmerJSON, err := ctx.GetStub().GetPrivateData("farmerPersonalInfo", farmerID)
+	// Get from world state
+	farmerJSON, err := ctx.GetStub().GetState(farmerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read farmer data: %v", err)
 	}
@@ -421,7 +405,7 @@ func (fc *FarmerChaincode) LinkFarmerToCoop(ctx contractapi.TransactionContextIn
 
 // GetCoopMembers retrieves all farmers in a cooperative
 func (fc *FarmerChaincode) GetCoopMembers(ctx contractapi.TransactionContextInterface,
-	coopID string) ([]*FarmerPublic, error) {
+	coopID string) ([]*Farmer, error) {
 
 	queryString := fmt.Sprintf(`{"selector":{"coopID":"%s"}}`, coopID)
 	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
@@ -430,14 +414,14 @@ func (fc *FarmerChaincode) GetCoopMembers(ctx contractapi.TransactionContextInte
 	}
 	defer resultsIterator.Close()
 
-	var farmers []*FarmerPublic
+	var farmers []*Farmer
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return nil, err
 		}
 
-		var farmer FarmerPublic
+		var farmer Farmer
 		err = json.Unmarshal(queryResponse.Value, &farmer)
 		if err != nil {
 			return nil, err
@@ -450,23 +434,23 @@ func (fc *FarmerChaincode) GetCoopMembers(ctx contractapi.TransactionContextInte
 
 // GetFarmersByRegion queries farmers in a specific geographic area
 func (fc *FarmerChaincode) GetFarmersByRegion(ctx contractapi.TransactionContextInterface,
-	region string) ([]*FarmerPublic, error) {
+	region string) ([]*Farmer, error) {
 
-	queryString := fmt.Sprintf(`{"selector":{"region":"%s"}}`, region)
+	queryString := fmt.Sprintf(`{"selector":{"farmLocation.region":"%s"}}`, region)
 	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query farmers by region: %v", err)
 	}
 	defer resultsIterator.Close()
 
-	var farmers []*FarmerPublic
+	var farmers []*Farmer
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return nil, err
 		}
 
-		var farmer FarmerPublic
+		var farmer Farmer
 		err = json.Unmarshal(queryResponse.Value, &farmer)
 		if err != nil {
 			return nil, err

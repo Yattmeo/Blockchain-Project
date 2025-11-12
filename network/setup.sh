@@ -74,6 +74,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('Insurer1MSP.peer')"
+      AnchorPeers:
+          - Host: peer0.insurer1.insurance.com
+            Port: 7051
 
   - &Insurer2
       Name: Insurer2MSP
@@ -92,6 +95,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('Insurer2MSP.peer')"
+      AnchorPeers:
+          - Host: peer0.insurer2.insurance.com
+            Port: 8051
 
   - &Coop
       Name: CoopMSP
@@ -110,6 +116,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('CoopMSP.peer')"
+      AnchorPeers:
+          - Host: peer0.coop.insurance.com
+            Port: 9051
 
   - &Platform
       Name: PlatformMSP
@@ -128,6 +137,9 @@ Organizations:
           Endorsement:
               Type: Signature
               Rule: "OR('PlatformMSP.peer')"
+      AnchorPeers:
+          - Host: peer0.platform.insurance.com
+            Port: 10051
 
 Capabilities:
     Channel: &ChannelCapabilities
@@ -231,12 +243,30 @@ Profiles:
                 - *Platform
             Capabilities:
                 <<: *ApplicationCapabilities
+
+    InsuranceChannelGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Insurer1
+                - *Insurer2
+                - *Coop
+                - *Platform
+            Capabilities:
+                <<: *ApplicationCapabilities
 EOF
 
-# Step 4: Generate genesis block
+# Step 4: Generate genesis block for application channel (Fabric 2.3+ style - no system channel)
 echo ""
 echo "Step 4: Generating genesis block..."
-configtxgen -profile InsuranceOrdererGenesis -channelID system-channel -outputBlock ./system-genesis-block/genesis.block
+configtxgen -profile InsuranceChannelGenesis -outputBlock ./channel-artifacts/insurance-channel.block -channelID insurance-channel
 
 if [ $? -ne 0 ]; then
     echo "Failed to generate genesis block"
@@ -246,7 +276,7 @@ fi
 # Step 5: Generate channel configuration transaction
 echo ""
 echo "Step 5: Generating channel configuration transaction..."
-configtxgen -profile InsuranceChannel -outputCreateChannelTx ./channel-artifacts/insurance-main.tx -channelID insurance-main
+configtxgen -profile InsuranceChannel -outputCreateChannelTx ./channel-artifacts/insurance-channel.tx -channelID insurance-channel
 
 if [ $? -ne 0 ]; then
     echo "Failed to generate channel configuration transaction"
@@ -256,10 +286,10 @@ fi
 # Step 6: Generate anchor peer updates
 echo ""
 echo "Step 6: Generating anchor peer updates..."
-configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/Insurer1MSPanchors.tx -channelID insurance-main -asOrg Insurer1MSP
-configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/Insurer2MSPanchors.tx -channelID insurance-main -asOrg Insurer2MSP
-configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/CoopMSPanchors.tx -channelID insurance-main -asOrg CoopMSP
-configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/PlatformMSPanchors.tx -channelID insurance-main -asOrg PlatformMSP
+configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/Insurer1MSPanchors.tx -channelID insurance-channel -asOrg Insurer1MSP
+configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/Insurer2MSPanchors.tx -channelID insurance-channel -asOrg Insurer2MSP
+configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/CoopMSPanchors.tx -channelID insurance-channel -asOrg CoopMSP
+configtxgen -profile InsuranceChannel -outputAnchorPeersUpdate ./channel-artifacts/PlatformMSPanchors.tx -channelID insurance-channel -asOrg PlatformMSP
 
 echo ""
 echo "========================================="

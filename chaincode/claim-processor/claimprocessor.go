@@ -358,6 +358,34 @@ func (cp *ClaimProcessorChaincode) GetPendingClaims(ctx contractapi.TransactionC
 	return claims, nil
 }
 
+// GetAllClaims returns all claims in the system
+func (cp *ClaimProcessorChaincode) GetAllClaims(ctx contractapi.TransactionContextInterface) ([]*Claim, error) {
+	// Query all claims using an empty selector (gets everything)
+	queryString := `{"selector":{}}`
+	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all claims: %v", err)
+	}
+	defer resultsIterator.Close()
+
+	var claims []*Claim
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var claim Claim
+		err = json.Unmarshal(queryResponse.Value, &claim)
+		if err != nil {
+			return nil, err
+		}
+		claims = append(claims, &claim)
+	}
+
+	return claims, nil
+}
+
 // GenerateClaimReport creates audit trail for claim
 func (cp *ClaimProcessorChaincode) GenerateClaimReport(ctx contractapi.TransactionContextInterface,
 	claimID string) (string, error) {
