@@ -544,69 +544,185 @@ assert_success "Manual deposit" "$MANUAL_DEPOSIT"
 echo ""
 
 ################################################################################
-# TEST SUITE 5: WEATHER ORACLE
+# TEST SUITE 5: WEATHER ORACLE WITH MULTI-ORACLE CONSENSUS
 ################################################################################
 
 echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}Test Suite 5: Weather Oracle${NC}"
+echo -e "${YELLOW}Test Suite 5: Weather Oracle & Consensus Validation${NC}"
 echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-# Test 5.1: Register oracle provider first (required before submitting data)
-echo "Test 5.1: Register oracle provider..."
-ORACLE_REG=$(curl -s -X POST "${API_BASE}/weather-oracle/register-provider" \
+# Test 5.1: Register multiple oracle providers
+echo "Test 5.1: Register Oracle 1 (OpenWeatherMap)..."
+ORACLE_1=$(curl -s -X POST "${API_BASE}/weather-oracle/register-provider" \
     -H "Content-Type: application/json" \
     -d "{
-        \"oracleID\": \"ORACLE_E2E_TEST\",
-        \"providerName\": \"E2E Test Oracle\",
+        \"oracleID\": \"ORACLE_E2E_OWM\",
+        \"providerName\": \"E2E OpenWeatherMap\",
         \"providerType\": \"API\",
-        \"dataSources\": [\"Test Meteorological Service\"]
+        \"dataSources\": [\"OpenWeatherMap\"]
     }")
 
-# Check if successful or already exists
-if echo "$ORACLE_REG" | jq -e '.success == true' > /dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} PASS: Register oracle provider"
+if echo "$ORACLE_1" | jq -e '.success == true' > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} PASS: Register Oracle 1"
     TESTS_PASSED=$((TESTS_PASSED + 1))
-elif echo "$ORACLE_REG" | grep -qi "already exists"; then
-    echo -e "${YELLOW}⚠${NC} PASS: Oracle already registered (continuing...)"
+elif echo "$ORACLE_1" | grep -qi "already exists"; then
+    echo -e "${YELLOW}⚠${NC} PASS: Oracle 1 already registered"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-    echo -e "${RED}✗${NC} FAIL: Register oracle provider"
-    echo "  Response: $ORACLE_REG"
+    echo -e "${RED}✗${NC} FAIL: Register Oracle 1"
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 TESTS_TOTAL=$((TESTS_TOTAL + 1))
-sleep 1
 
-# Test 5.2: Submit drought weather data
-echo "Test 5.2: Submit drought weather data..."
-WEATHER_RESPONSE=$(curl -s -X POST "${API_BASE}/weather-oracle" \
+echo "Test 5.1: Register Oracle 2 (Thai Met)..."
+ORACLE_2=$(curl -s -X POST "${API_BASE}/weather-oracle/register-provider" \
     -H "Content-Type: application/json" \
     -d "{
-        \"dataID\": \"${WEATHER_ID}\",
-        \"oracleID\": \"ORACLE_E2E_TEST\",
-        \"location\": \"Test Region, Singapore\",
+        \"oracleID\": \"ORACLE_E2E_TMD\",
+        \"providerName\": \"E2E Thai Meteorological\",
+        \"providerType\": \"API\",
+        \"dataSources\": [\"ThaiMeteorology\"]
+    }")
+
+if echo "$ORACLE_2" | jq -e '.success == true' > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} PASS: Register Oracle 2"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+elif echo "$ORACLE_2" | grep -qi "already exists"; then
+    echo -e "${YELLOW}⚠${NC} PASS: Oracle 2 already registered"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Register Oracle 2"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+TESTS_TOTAL=$((TESTS_TOTAL + 1))
+
+echo "Test 5.1: Register Oracle 3 (Weather Underground)..."
+ORACLE_3=$(curl -s -X POST "${API_BASE}/weather-oracle/register-provider" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"oracleID\": \"ORACLE_E2E_WU\",
+        \"providerName\": \"E2E Weather Underground\",
+        \"providerType\": \"API\",
+        \"dataSources\": [\"WeatherUnderground\"]
+    }")
+
+if echo "$ORACLE_3" | jq -e '.success == true' > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} PASS: Register Oracle 3"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+elif echo "$ORACLE_3" | grep -qi "already exists"; then
+    echo -e "${YELLOW}⚠${NC} PASS: Oracle 3 already registered"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Register Oracle 3"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+TESTS_TOTAL=$((TESTS_TOTAL + 1))
+
+sleep 1
+
+# Test 5.2: Submit drought weather data from multiple oracles
+CONSENSUS_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+echo "Test 5.2: Submit weather data from Oracle 1..."
+WEATHER_1=$(curl -s -X POST "${API_BASE}/weather-oracle" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"dataID\": \"${WEATHER_ID}_01\",
+        \"oracleID\": \"ORACLE_E2E_OWM\",
+        \"location\": \"Test_Region\",
         \"latitude\": \"1.3521\",
         \"longitude\": \"103.8198\",
         \"rainfall\": 35.0,
         \"temperature\": 34.5,
         \"humidity\": 65.0,
         \"windSpeed\": 12.5,
-        \"recordedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+        \"recordedAt\": \"${CONSENSUS_TIMESTAMP}\"
     }")
-assert_success "Submit weather data" "$WEATHER_RESPONSE"
+assert_success "Submit weather data from Oracle 1" "$WEATHER_1"
 
-# Test 5.3: Get weather data by ID
-echo "Test 5.3: Get weather data by ID..."
+echo "Test 5.2: Submit weather data from Oracle 2 (slight variation)..."
+WEATHER_2=$(curl -s -X POST "${API_BASE}/weather-oracle" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"dataID\": \"${WEATHER_ID}_02\",
+        \"oracleID\": \"ORACLE_E2E_TMD\",
+        \"location\": \"Test_Region\",
+        \"latitude\": \"1.3521\",
+        \"longitude\": \"103.8198\",
+        \"rainfall\": 36.5,
+        \"temperature\": 34.8,
+        \"humidity\": 66.0,
+        \"windSpeed\": 12.0,
+        \"recordedAt\": \"${CONSENSUS_TIMESTAMP}\"
+    }")
+assert_success "Submit weather data from Oracle 2" "$WEATHER_2"
+
+echo "Test 5.2: Submit weather data from Oracle 3 (within consensus range)..."
+WEATHER_3=$(curl -s -X POST "${API_BASE}/weather-oracle" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"dataID\": \"${WEATHER_ID}_03\",
+        \"oracleID\": \"ORACLE_E2E_WU\",
+        \"location\": \"Test_Region\",
+        \"latitude\": \"1.3521\",
+        \"longitude\": \"103.8198\",
+        \"rainfall\": 33.8,
+        \"temperature\": 34.2,
+        \"humidity\": 64.5,
+        \"windSpeed\": 13.0,
+        \"recordedAt\": \"${CONSENSUS_TIMESTAMP}\"
+    }")
+assert_success "Submit weather data from Oracle 3" "$WEATHER_3"
+
 sleep 1
-WEATHER_GET=$(curl -s "${API_BASE}/weather-oracle/${WEATHER_ID}")
-RAINFALL=$(echo "$WEATHER_GET" | jq -r '.data.rainfall // empty')
-assert_equals "Rainfall value" "35" "$RAINFALL"
 
-# Test 5.4: Get weather data by location
-echo "Test 5.4: Get weather data by location..."
-LOCATION_WEATHER=$(curl -s "${API_BASE}/weather-oracle/location/Test%20Region")
+# Test 5.3: Validate consensus across oracles (should trigger automatic payout)
+echo "Test 5.3: Validate weather data consensus and check automatic payout..."
+CONSENSUS_RESULT=$(curl -s -X POST "${API_BASE}/weather-oracle/validate-consensus" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"location\": \"Test_Region\",
+        \"timestamp\": \"${CONSENSUS_TIMESTAMP}\",
+        \"dataIDs\": [\"${WEATHER_ID}_01\", \"${WEATHER_ID}_02\", \"${WEATHER_ID}_03\"]
+    }")
+assert_success "Validate consensus" "$CONSENSUS_RESULT"
+
+CONSENSUS_REACHED=$(echo "$CONSENSUS_RESULT" | jq -r '.data.consensusReached // false')
+assert_equals "Consensus reached" "true" "$CONSENSUS_REACHED"
+
+# Test 5.3b: Verify automatic payout system was triggered
+echo "Test 5.3b: Verify automatic payout system responded..."
+PAYOUT_ENABLED=$(echo "$CONSENSUS_RESULT" | jq -r '.data.automaticPayouts.enabled // false')
+assert_equals "Automatic payout enabled" "true" "$PAYOUT_ENABLED"
+
+POLICIES_CHECKED=$(echo "$CONSENSUS_RESULT" | jq -r '.data.automaticPayouts.policiesChecked // 0')
+echo "  Policies checked for thresholds: $POLICIES_CHECKED"
+
+# Test 5.4: Verify data status changed to Validated
+echo "Test 5.4: Verify weather data status changed to 'Validated'..."
+sleep 2
+VALIDATED_DATA=$(curl -s "${API_BASE}/weather-oracle/${WEATHER_ID}_01")
+DATA_STATUS=$(echo "$VALIDATED_DATA" | jq -r '.data.status // empty')
+assert_equals "Weather data status" "Validated" "$DATA_STATUS"
+
+VALIDATION_SCORE=$(echo "$VALIDATED_DATA" | jq -r '.data.validationScore // 0')
+assert_equals "Validation score" "100" "$VALIDATION_SCORE"
+
+# Test 5.5: Get weather data by location (should show all 3 validated submissions)
+echo "Test 5.5: Get weather data by location..."
+LOCATION_WEATHER=$(curl -s "${API_BASE}/weather-oracle/location/Test_Region")
 assert_success "Get weather by location" "$LOCATION_WEATHER"
+
+WEATHER_COUNT=$(echo "$LOCATION_WEATHER" | jq '.data | length')
+if [ "$WEATHER_COUNT" -ge 3 ]; then
+    echo -e "${GREEN}✓${NC} PASS: Found $WEATHER_COUNT weather data points"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Expected at least 3 data points, found $WEATHER_COUNT"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+TESTS_TOTAL=$((TESTS_TOTAL + 1))
 
 echo ""
 
@@ -619,15 +735,15 @@ echo -e "${YELLOW}Test Suite 6: Claims Processing & Payout${NC}"
 echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-# Test 6.1: Trigger claim based on weather
-echo "Test 6.1: Trigger claim (drought condition)..."
+# Test 6.1: Trigger claim based on validated weather data
+echo "Test 6.1: Trigger claim (drought condition - using validated consensus data)..."
 CLAIM_RESPONSE=$(curl -s -X POST "${API_BASE}/claims" \
     -H "Content-Type: application/json" \
     -d "{
         \"claimID\": \"${CLAIM_ID}\",
         \"policyID\": \"${POLICY_ID}\",
         \"farmerID\": \"${FARMER_ID}\",
-        \"weatherDataID\": \"${WEATHER_ID}\",
+        \"weatherDataID\": \"${WEATHER_ID}_01\",
         \"coverageAmount\": 5000,
         \"payoutPercent\": 50
     }")

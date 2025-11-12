@@ -94,8 +94,29 @@ echo "$STATS" | jq -r 'to_entries | .[] | "    \(.key): \(.value)"'
 echo -e "${YELLOW}7. Approval System${NC}"
 test_endpoint "Pending Approvals" "${API_BASE}/approval/pending" '.data'
 
-# 8. Verify UI is accessible
-echo -e "${YELLOW}8. User Interface${NC}"
+# 8. Test Weather Oracle
+echo -e "${YELLOW}8. Weather Oracle & Consensus${NC}"
+test_endpoint "Weather Data (Central Bangkok)" "${API_BASE}/weather-oracle/location/Central_Bangkok" '.data[0].location'
+
+WEATHER_CENTRAL=$(curl -s "${API_BASE}/weather-oracle/location/Central_Bangkok" | jq '.data | length')
+WEATHER_NORTH=$(curl -s "${API_BASE}/weather-oracle/location/North_ChiangMai" | jq '.data | length')
+WEATHER_SOUTH=$(curl -s "${API_BASE}/weather-oracle/location/South_Songkhla" | jq '.data | length')
+
+echo "  Weather data points:"
+echo "    Central_Bangkok: $WEATHER_CENTRAL"
+echo "    North_ChiangMai: $WEATHER_NORTH"
+echo "    South_Songkhla: $WEATHER_SOUTH"
+
+# Check if weather data is validated (not pending)
+VALIDATED_COUNT=$(curl -s "${API_BASE}/weather-oracle/location/Central_Bangkok" | jq '[.data[] | select(.status == "Validated")] | length')
+if [ "$VALIDATED_COUNT" -gt 0 ]; then
+    echo -e "  Validated weather data: ${GREEN}$VALIDATED_COUNT${NC} (consensus reached)"
+else
+    echo -e "  Validated weather data: ${YELLOW}0 (pending consensus)${NC}"
+fi
+
+# 9. Verify UI is accessible
+echo -e "${YELLOW}9. User Interface${NC}"
 echo -n "Testing UI accessibility... "
 if curl -s -f http://localhost:5173 > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASS${NC}"

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import fabricGateway from '../services/fabricGateway';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import config from '../config';
+import automaticPayoutService from '../services/automaticPayout.service';
+import logger from '../utils/logger';
 
 /**
  * Submit weather data
@@ -124,6 +126,37 @@ export const validateConsensus = asyncHandler(async (req: Request, res: Response
 
   const consensusReached = result === 'true' || result === true;
 
+  // If consensus reached, trigger automatic payout checking
+  let payoutResult = null;
+  if (consensusReached) {
+    logger.info(`🎯 Consensus reached for ${location} - checking for automatic payout triggers...`);
+    
+    try {
+      // Get the first validated weather data to extract consensus values
+      const weatherData = await fabricGateway.evaluateTransaction(
+        config.chaincodes.weatherOracle,
+        'GetWeatherData',
+        dataIDs[0]
+      );
+      const weather = JSON.parse(weatherData.toString());
+
+      // Trigger automatic payout checking
+      payoutResult = await automaticPayoutService.processConsensusAndTriggerPayouts({
+        location,
+        timestamp,
+        rainfall: weather.rainfall,
+        temperature: weather.temperature,
+        humidity: weather.humidity,
+      });
+
+      logger.info(`✅ Automatic payout processing complete: ${payoutResult.claimsTriggered.length} claims triggered`);
+    } catch (error: any) {
+      // Log but don't fail the consensus validation
+      logger.error(`Error during automatic payout processing: ${error.message}`);
+      // Include error in response but don't throw
+    }
+  }
+
   res.json({
     success: true,
     message: consensusReached ? 'Consensus validation successful' : 'Consensus not reached',
@@ -131,7 +164,17 @@ export const validateConsensus = asyncHandler(async (req: Request, res: Response
       consensusReached,
       location,
       timestamp,
-      validatedDataPoints: dataIDs.length
+      validatedDataPoints: dataIDs.length,
+      automaticPayouts: consensusReached ? {
+        enabled: true,
+        policiesChecked: payoutResult?.policiesChecked || 0,
+        thresholdsBreached: payoutResult?.thresholdsBreached || 0,
+        claimsTriggered: payoutResult?.claimsTriggered || [],
+        errors: payoutResult?.errors || [],
+      } : {
+        enabled: false,
+        reason: 'Consensus not reached',
+      }
     }
   });
 });

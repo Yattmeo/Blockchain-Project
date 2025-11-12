@@ -649,62 +649,178 @@ func GetClaimsByStatus(ctx, status string) ([]*Claim, error)
 #### WeatherData
 ```go
 type WeatherData struct {
-    DataID      string    `json:"dataID"`
-    OracleID    string    `json:"oracleID"`
-    Location    string    `json:"location"`
-    Latitude    string    `json:"latitude"`
-    Longitude   string    `json:"longitude"`
-    Rainfall    float64   `json:"rainfall"`    // mm
-    Temperature float64   `json:"temperature"` // Celsius
-    Humidity    float64   `json:"humidity"`    // %
-    WindSpeed   float64   `json:"windSpeed"`   // km/h
-    Timestamp   time.Time `json:"timestamp"`
-    RecordedAt  time.Time `json:"recordedAt"`
+    DataID          string    `json:"dataID"`          // Unique data identifier
+    OracleID        string    `json:"oracleID"`        // Oracle provider identifier
+    Location        string    `json:"location"`        // Geographic location/region
+    Latitude        float64   `json:"latitude"`        // Latitude coordinate
+    Longitude       float64   `json:"longitude"`       // Longitude coordinate
+    Timestamp       time.Time `json:"timestamp"`       // Observation timestamp
+    Rainfall        float64   `json:"rainfall"`        // Rainfall in mm
+    Temperature     float64   `json:"temperature"`     // Temperature in Celsius
+    Humidity        float64   `json:"humidity"`        // Humidity percentage
+    WindSpeed       float64   `json:"windSpeed"`       // Wind speed in km/h
+    DataHash        string    `json:"dataHash"`        // Hash of raw data
+    ValidationScore float64   `json:"validationScore"` // Consensus score 0-100
+    Status          string    `json:"status"`          // Pending, Validated, Anomalous
+    SubmittedBy     string    `json:"submittedBy"`     // Oracle submitter identity
 }
 ```
+
+**Status Values**:
+- `Pending` - Initial state, awaiting consensus validation
+- `Validated` - Passed consensus validation (ValidationScore = 100.0)
+- `Anomalous` - Failed consensus validation (outlier data)
 
 #### OracleProvider
 ```go
 type OracleProvider struct {
-    OracleID    string  `json:"oracleID"`
-    Name        string  `json:"name"`
-    DataSource  string  `json:"dataSource"`
-    Location    string  `json:"location"`
-    TrustScore  int     `json:"trustScore"` // 0-100
-    IsActive    bool    `json:"isActive"`
+    OracleID         string    `json:"oracleID"`         // Unique oracle identifier
+    ProviderName     string    `json:"providerName"`     // Provider name
+    ProviderType     string    `json:"providerType"`     // API, Satellite, IoT, Manual
+    DataSources      []string  `json:"dataSources"`      // Source APIs/systems
+    ReputationScore  float64   `json:"reputationScore"`  // Trust score (0-100)
+    TotalSubmissions int       `json:"totalSubmissions"` // Total data submissions
+    AnomalousCount   int       `json:"anomalousCount"`   // Number of anomalous submissions
+    Status           string    `json:"status"`           // Active, Suspended, Revoked
+    RegisteredDate   time.Time `json:"registeredDate"`   // Registration timestamp
+    LastSubmission   time.Time `json:"lastSubmission"`   // Last submission time
 }
 ```
 
+**Reputation Scoring**:
+- Starts at 100.0 (perfect score)
+- Decreases when anomalous data is submitted
+- Used to assess oracle trustworthiness
+
+#### ConsensusRecord
+```go
+type ConsensusRecord struct {
+    RecordID         string             `json:"recordID"`         // Unique consensus ID
+    Location         string             `json:"location"`         // Geographic location
+    Timestamp        time.Time          `json:"timestamp"`        // Observation timestamp
+    OracleCount      int                `json:"oracleCount"`      // Number of oracles
+    Consensus        map[string]float64 `json:"consensus"`        // Agreed weather values
+    ConsensusReached bool               `json:"consensusReached"` // 2/3+ agreement reached
+    CreatedDate      time.Time          `json:"createdDate"`      // Record creation time
+}
+```
+
+**Consensus Validation**:
+- Requires minimum 2 oracle submissions
+- Calculates average values across all submissions
+- Validates each submission within 20% variance threshold
+- Requires 2/3 majority to reach consensus
+
 ### Functions
 
-#### SubmitWeatherData
-**Purpose**: Submit weather data
+#### RegisterOracleProvider
+**Purpose**: Register an authorized weather data source
 
 **Signature**:
 ```go
-func SubmitWeatherData(ctx, dataID, oracleID, location, latitude, longitude string,
-    rainfall, temperature, humidity, windSpeed float64, recordedAt string) error
+func RegisterOracleProvider(ctx, oracleID, providerName, providerType string, 
+    dataSources []string) error
 ```
 
-**Logic**:
-1. Validates all fields present
-2. Parses recordedAt timestamp
-3. Creates WeatherData object
-4. Stores in ledger with key `WEATHER_{dataID}`
+**Parameters**:
+- `oracleID`: Unique identifier for the oracle
+- `providerName`: Name of the provider (e.g., "OpenWeatherMap API")
+- `providerType`: Type - "API", "Satellite", "IoT", or "Manual"
+- `dataSources`: Array of data source names
+
+**Validation**:
+- OracleID must be unique
+- Provider type must be valid
+- Starts with reputation score of 100.0
+
+**Example**:
+```go
+RegisterOracleProvider(ctx, "ORACLE_OPENWEATHER", "OpenWeatherMap API", 
+    "API", []string{"OpenWeatherMap"})
+```
 
 ---
 
-#### RegisterProvider
-**Purpose**: Register oracle provider
+#### SubmitWeatherData
+**Purpose**: Submit weather observation from an oracle
 
 **Signature**:
 ```go
-func RegisterProvider(ctx, oracleID, name, dataSource, location string, trustScore int) error
+func SubmitWeatherData(ctx, dataID, oracleID, location string, 
+    latitude, longitude, rainfall, temperature, humidity, windSpeed float64, 
+    dataHash string) error
 ```
 
-**Validation**:
-- Trust score must be 0-100
-- OracleID must be unique
+**Parameters**:
+- `dataID`: Unique identifier for this data point
+- `oracleID`: Oracle provider submitting the data
+- `location`: Geographic location/region name
+- `latitude`: Latitude coordinate
+- `longitude`: Longitude coordinate
+- `rainfall`: Rainfall in mm
+- `temperature`: Temperature in Celsius
+- `humidity`: Humidity percentage (0-100)
+- `windSpeed`: Wind speed in km/h
+- `dataHash`: Hash of raw data for verification
+
+**Logic**:
+1. Validates oracle is active
+2. Validates data ranges (rainfall: 0-1000mm, temp: -50 to 60°C, humidity: 0-100%)
+3. Creates WeatherData with status "Pending"
+4. ValidationScore set to 0.0
+5. Stores in ledger
+
+**Initial State**:
+- Status: "Pending"
+- ValidationScore: 0.0
+- Awaits consensus validation
+
+---
+
+#### ValidateDataConsensus
+**Purpose**: Validate weather data using multi-oracle consensus
+
+**Signature**:
+```go
+func ValidateDataConsensus(ctx, location, timestampStr string, 
+    dataIDs []string) (bool, error)
+```
+
+**Parameters**:
+- `location`: Geographic location for consensus check
+- `timestampStr`: RFC3339 timestamp string
+- `dataIDs`: Array of data IDs from different oracles to validate
+
+**Requirements**:
+- Minimum 2 oracle submissions required
+- 2/3 majority required for consensus
+
+**Algorithm**:
+1. Collect all weather data submissions
+2. Calculate average values (rainfall, temperature, humidity)
+3. Check each submission against average (20% variance threshold)
+4. Count submissions within consensus threshold
+5. Update status:
+   - Within threshold → "Validated" (ValidationScore = 100.0)
+   - Outside threshold → "Anomalous" (ValidationScore = 0.0)
+6. Penalize oracle reputation for anomalous data
+7. Store ConsensusRecord if 2/3+ consensus reached
+
+**Example**:
+```go
+// 3 oracles submit data for same location/time
+ValidateDataConsensus(ctx, "Central_Bangkok", "2025-11-13T10:00:00Z",
+    []string{"WEATHER_001", "WEATHER_002", "WEATHER_003"})
+
+// Returns: true (consensus reached)
+// Result: All 3 submissions marked "Validated" with score 100.0
+```
+
+**Variance Calculation**:
+```
+variance = |submittedValue - averageValue| / averageValue
+consensus = variance <= 0.20 (20%)
+```
 
 ---
 
@@ -716,15 +832,24 @@ func RegisterProvider(ctx, oracleID, name, dataSource, location string, trustSco
 func GetWeatherData(ctx, dataID string) (*WeatherData, error)
 ```
 
+**Returns**: Single weather data entry with validation status
+
 ---
 
-#### GetWeatherDataByLocation
-**Purpose**: Get all weather data for a location
+#### GetWeatherByRegion
+**Purpose**: Get all weather data for a location within date range
 
 **Signature**:
 ```go
-func GetWeatherDataByLocation(ctx, location string) ([]*WeatherData, error)
+func GetWeatherByRegion(ctx, location, startDate, endDate string) ([]*WeatherData, error)
 ```
+
+**Parameters**:
+- `location`: Region name (e.g., "Central_Bangkok")
+- `startDate`: RFC3339 timestamp for range start
+- `endDate`: RFC3339 timestamp for range end
+
+**Returns**: Array of weather data for location, includes all statuses (Pending, Validated, Anomalous)
 
 ---
 
@@ -736,7 +861,47 @@ func GetWeatherDataByLocation(ctx, location string) ([]*WeatherData, error)
 func GetOracleProvider(ctx, oracleID string) (*OracleProvider, error)
 ```
 
+**Returns**: Oracle provider with reputation score and submission statistics
+
 ---
+
+#### UpdateOracleReputation
+**Purpose**: Update oracle reputation based on data quality
+
+**Signature**:
+```go
+func UpdateOracleReputation(ctx, oracleID string, anomalous bool) error
+```
+
+**Logic**:
+- If anomalous = true → Decrease reputation score
+- Increment anomalousCount
+- Update totalSubmissions
+- Can lead to oracle suspension if reputation drops too low
+
+---
+
+#### FlagAnomalousData
+**Purpose**: Mark specific weather data as anomalous
+
+**Signature**:
+```go
+func FlagAnomalousData(ctx, dataID string) error
+```
+
+**Result**: Sets status to "Anomalous", ValidationScore to 0.0
+
+---
+
+#### GetConsensusData
+**Purpose**: Retrieve consensus record for location/time
+
+**Signature**:
+```go
+func GetConsensusData(ctx, location, timestamp string) (*ConsensusRecord, error)
+```
+
+**Returns**: Consensus record with averaged values and validation status
 
 ## Farmer Chaincode
 

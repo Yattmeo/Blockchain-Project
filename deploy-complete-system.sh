@@ -343,9 +343,9 @@ seed_demo_data() {
     
     print_success "2 demo farmers registered"
     
-    print_info "Creating demo policy..."
+    print_info "Creating demo policies for different regions..."
     
-    # Create policy (creates approval request)
+    # Policy 1 - Central Bangkok (will be triggered by low rainfall)
     POLICY_RESPONSE=$(curl -s -X POST http://localhost:3001/api/policies \
         -H "Content-Type: application/json" \
         -d '{
@@ -357,7 +357,7 @@ seed_demo_data() {
             "startDate": "2025-01-01",
             "endDate": "2025-12-31",
             "cropType": "Rice",
-            "farmLocation": "1.3521,103.8198",
+            "farmLocation": "Central_Bangkok",
             "farmSize": 5.5,
             "coopID": "COOP001",
             "insurerID": "INSURER001"
@@ -417,24 +417,240 @@ seed_demo_data() {
         print_warning "Could not create demo policy"
     fi
     
-    print_info "Submitting demo weather data..."
+    print_info "Registering multiple weather oracle providers for consensus..."
     
+    # Register Oracle 1 - OpenWeatherMap
+    curl -s -X POST http://localhost:3001/api/weather-oracle/register-provider \
+        -H "Content-Type: application/json" \
+        -d '{
+            "oracleID": "ORACLE_OPENWEATHER",
+            "providerName": "OpenWeatherMap API",
+            "providerType": "API",
+            "dataSources": ["OpenWeatherMap"],
+            "regions": ["Central_Bangkok", "North_ChiangMai", "South_Songkhla"]
+        }' > /dev/null 2>&1
+    
+    # Register Oracle 2 - Thai Meteorological Department
+    curl -s -X POST http://localhost:3001/api/weather-oracle/register-provider \
+        -H "Content-Type: application/json" \
+        -d '{
+            "oracleID": "ORACLE_THAI_MET",
+            "providerName": "Thai Meteorological Department",
+            "providerType": "API",
+            "dataSources": ["ThaiMeteorology"],
+            "regions": ["Central_Bangkok", "North_ChiangMai", "South_Songkhla"]
+        }' > /dev/null 2>&1
+    
+    # Register Oracle 3 - Weather Underground
+    curl -s -X POST http://localhost:3001/api/weather-oracle/register-provider \
+        -H "Content-Type: application/json" \
+        -d '{
+            "oracleID": "ORACLE_WUNDERGROUND",
+            "providerName": "Weather Underground",
+            "providerType": "API",
+            "dataSources": ["WeatherUnderground"],
+            "regions": ["Central_Bangkok", "North_ChiangMai", "South_Songkhla"]
+        }' > /dev/null 2>&1
+    
+    print_success "3 weather oracle providers registered"
+    
+    print_info "Submitting weather data from multiple oracles for consensus validation..."
+    
+    TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    
+    # === CENTRAL BANGKOK (LOW RAINFALL - WILL TRIGGER PAYOUT) ===
+    # Oracle 1 data (drought conditions)
     curl -s -X POST http://localhost:3001/api/weather-oracle \
         -H "Content-Type: application/json" \
         -d '{
-            "dataID": "WEATHER_DEMO_001",
-            "oracleID": "ORACLE_DEMO",
-            "location": "Singapore, North Region",
-            "latitude": "1.3521",
-            "longitude": "103.8198",
-            "rainfall": 85.0,
-            "temperature": 31.5,
-            "humidity": 75.0,
-            "windSpeed": 10.5,
-            "recordedAt": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+            "dataID": "WEATHER_CENTRAL_01",
+            "oracleID": "ORACLE_OPENWEATHER",
+            "location": "Central_Bangkok",
+            "latitude": "13.7563",
+            "longitude": "100.5018",
+            "rainfall": 35.0,
+            "temperature": 34.5,
+            "humidity": 65.0,
+            "windSpeed": 12.5,
+            "recordedAt": "'$TIMESTAMP'"
         }' > /dev/null 2>&1
     
-    print_success "Demo weather data submitted"
+    # Oracle 2 data (slight variation - still drought)
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_CENTRAL_02",
+            "oracleID": "ORACLE_THAI_MET",
+            "location": "Central_Bangkok",
+            "latitude": "13.7563",
+            "longitude": "100.5018",
+            "rainfall": 38.5,
+            "temperature": 34.8,
+            "humidity": 66.0,
+            "windSpeed": 12.0,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # Oracle 3 data (within consensus range - drought)
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_CENTRAL_03",
+            "oracleID": "ORACLE_WUNDERGROUND",
+            "location": "Central_Bangkok",
+            "latitude": "13.7563",
+            "longitude": "100.5018",
+            "rainfall": 33.0,
+            "temperature": 34.2,
+            "humidity": 64.5,
+            "windSpeed": 13.0,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # === NORTH CHIANG MAI ===
+    # Oracle 1 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_NORTH_01",
+            "oracleID": "ORACLE_OPENWEATHER",
+            "location": "North_ChiangMai",
+            "latitude": "18.7883",
+            "longitude": "98.9853",
+            "rainfall": 120.5,
+            "temperature": 28.2,
+            "humidity": 82.0,
+            "windSpeed": 8.3,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # Oracle 2 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_NORTH_02",
+            "oracleID": "ORACLE_THAI_MET",
+            "location": "North_ChiangMai",
+            "latitude": "18.7883",
+            "longitude": "98.9853",
+            "rainfall": 118.0,
+            "temperature": 28.5,
+            "humidity": 81.5,
+            "windSpeed": 8.5,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # Oracle 3 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_NORTH_03",
+            "oracleID": "ORACLE_WUNDERGROUND",
+            "location": "North_ChiangMai",
+            "latitude": "18.7883",
+            "longitude": "98.9853",
+            "rainfall": 122.0,
+            "temperature": 28.0,
+            "humidity": 82.5,
+            "windSpeed": 8.0,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # === SOUTH SONGKHLA ===
+    # Oracle 1 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_SOUTH_01",
+            "oracleID": "ORACLE_OPENWEATHER",
+            "location": "South_Songkhla",
+            "latitude": "7.2061",
+            "longitude": "100.5950",
+            "rainfall": 95.3,
+            "temperature": 29.8,
+            "humidity": 78.5,
+            "windSpeed": 12.1,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # Oracle 2 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_SOUTH_02",
+            "oracleID": "ORACLE_THAI_MET",
+            "location": "South_Songkhla",
+            "latitude": "7.2061",
+            "longitude": "100.5950",
+            "rainfall": 97.0,
+            "temperature": 30.0,
+            "humidity": 79.0,
+            "windSpeed": 11.8,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    # Oracle 3 data
+    curl -s -X POST http://localhost:3001/api/weather-oracle \
+        -H "Content-Type: application/json" \
+        -d '{
+            "dataID": "WEATHER_SOUTH_03",
+            "oracleID": "ORACLE_WUNDERGROUND",
+            "location": "South_Songkhla",
+            "latitude": "7.2061",
+            "longitude": "100.5950",
+            "rainfall": 93.8,
+            "temperature": 29.5,
+            "humidity": 78.0,
+            "windSpeed": 12.3,
+            "recordedAt": "'$TIMESTAMP'"
+        }' > /dev/null 2>&1
+    
+    print_success "Weather data submitted from 3 oracles for all regions (9 submissions)"
+    
+    print_info "Validating weather data consensus..."
+    
+    # Validate consensus for Central Bangkok (will trigger automatic payout)
+    print_info "Validating Central Bangkok consensus (DROUGHT - will trigger automatic payout)..."
+    CENTRAL_CONSENSUS=$(curl -s -X POST http://localhost:3001/api/weather-oracle/validate-consensus \
+        -H "Content-Type: application/json" \
+        -d '{
+            "location": "Central_Bangkok",
+            "timestamp": "'$TIMESTAMP'",
+            "dataIDs": ["WEATHER_CENTRAL_01", "WEATHER_CENTRAL_02", "WEATHER_CENTRAL_03"]
+        }')
+    
+    # Check if automatic payout was triggered
+    CLAIMS_TRIGGERED=$(echo "$CENTRAL_CONSENSUS" | jq -r '.data.automaticPayouts.claimsTriggered | length' 2>/dev/null || echo "0")
+    if [ "$CLAIMS_TRIGGERED" -gt 0 ]; then
+        print_success "Consensus validated - $CLAIMS_TRIGGERED automatic claim(s) triggered!"
+        echo "$CENTRAL_CONSENSUS" | jq -r '.data.automaticPayouts.claimsTriggered[]' 2>/dev/null | while read claim; do
+            print_success "  → Claim: $claim"
+        done
+    else
+        print_success "Consensus validated (no threshold breaches)"
+    fi
+    
+    sleep 1
+    
+    # Validate consensus for North Chiang Mai
+    curl -s -X POST http://localhost:3001/api/weather-oracle/validate-consensus \
+        -H "Content-Type: application/json" \
+        -d '{
+            "location": "North_ChiangMai",
+            "timestamp": "'$TIMESTAMP'",
+            "dataIDs": ["WEATHER_NORTH_01", "WEATHER_NORTH_02", "WEATHER_NORTH_03"]
+        }' > /dev/null 2>&1
+    
+    # Validate consensus for South Songkhla
+    curl -s -X POST http://localhost:3001/api/weather-oracle/validate-consensus \
+        -H "Content-Type: application/json" \
+        -d '{
+            "location": "South_Songkhla",
+            "timestamp": "'$TIMESTAMP'",
+            "dataIDs": ["WEATHER_SOUTH_01", "WEATHER_SOUTH_02", "WEATHER_SOUTH_03"]
+        }' > /dev/null 2>&1
+    
+    print_success "Weather data consensus validation completed"
     
     echo ""
 }

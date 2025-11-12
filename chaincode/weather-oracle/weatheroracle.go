@@ -453,6 +453,23 @@ func (wo *WeatherOracleChaincode) ValidateDataConsensus(ctx contractapi.Transact
 		return false, fmt.Errorf("failed to store consensus record: %v", err)
 	}
 
+	// If consensus reached, trigger automatic policy threshold checking
+	if consensusReached {
+		// Note: Automatic claim triggering happens via API Gateway orchestration
+		// The API Gateway will call CheckPolicyThresholds after this function returns
+		// This ensures proper separation of concerns and cross-chaincode coordination
+
+		// Emit an event for external monitoring systems
+		err = ctx.GetStub().SetEvent("ConsensusReached", []byte(fmt.Sprintf(
+			`{"location":"%s","timestamp":"%s","rainfall":%.2f,"temperature":%.2f,"humidity":%.2f}`,
+			location, timestamp.Format(time.RFC3339), avgRainfall, avgTemp, avgHumidity,
+		)))
+		if err != nil {
+			// Log but don't fail - event emission is not critical
+			fmt.Printf("Warning: failed to emit ConsensusReached event: %v\n", err)
+		}
+	}
+
 	return consensusReached, nil
 }
 
