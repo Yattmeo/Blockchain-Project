@@ -9,7 +9,7 @@ echo "Deploying premium-pool chaincode..."
 CC_NAME="premium-pool"
 CC_VERSION="3"
 CHANNEL_NAME="insurance-channel"
-SEQUENCE="2"
+SEQUENCE="1"
 POLICY_EXPR="OR('Insurer1MSP.peer','Insurer2MSP.peer','CoopMSP.peer','PlatformMSP.peer')"
 
 echo "Step 1: Packaging chaincode..."
